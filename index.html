@@ -42,6 +42,7 @@
     const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
     const DAYS_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
     const DAY_MS = 86400000;
+    const ord = (n) => { if (n > 3 && n < 21) return n + 'th'; switch (n % 10) { case 1: return n + 'st'; case 2: return n + 'nd'; case 3: return n + 'rd'; default: return n + 'th'; } };
 
     const sameDay = (a, b) =>
       a.getFullYear() === b.getFullYear() &&
@@ -95,7 +96,7 @@
         dateStr: item.date || '',
         venue: item.address || '',
         category: item.category || 'community',
-        price: item.cost || 'Free',
+        price: item.cost || '',
         placeholder: (item.name || '').toLowerCase(),
         image_url: item.image_url || '',
         source_url: item.source_url || '',
@@ -296,7 +297,7 @@
 
     const UPCOMING_FILTERS = [
       { id: 'all',      label: 'All' },
-      { id: 'free',     label: 'Free entry',       test: (e) => /free/i.test(e.price || '') },
+      { id: 'free',     label: 'Free entry',       test: (e) => e.price && /\bfree\b/i.test(e.price) },
       { id: 'evening',  label: 'Evenings',          test: (e) => e.date.getHours() >= 18 },
       { id: 'outdoors', label: 'Outdoors',          test: (e) => ['outdoors','sport','market','community'].includes(e.category) },
       { id: 'family',   label: 'Family-friendly',   test: (e) => ['family','community','market'].includes(e.category) },
@@ -335,8 +336,8 @@
     }
 
     function Hero({ today, thisWeekCount, ticketCount, generatedAt }) {
-      const dateLine = `${DAYS_FULL[today.getDay()]} ${today.getDate()} ${MONTHS_FULL[today.getMonth()]}`;
-      const updatedDate = generatedAt ? generatedAt.slice(0, 10) : dateLine.toLowerCase();
+      const fmtDate = (d) => `${DAYS_FULL[d.getDay()]} ${ord(d.getDate())} ${MONTHS_FULL[d.getMonth()]}`;
+      const updatedDate = generatedAt ? fmtDate(new Date(generatedAt)) : fmtDate(today);
       return (
         <section className="hero hero--green">
           <div className="hero__panel">
