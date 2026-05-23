@@ -465,17 +465,12 @@
       );
 
       const { today, thisWeek, onSale, generatedAt } = evData;
-      const weekEnd = addDays(today, 7);
 
-      const filteredUpcoming = React.useMemo(() => {
-        const f = UPCOMING_FILTERS.find((x) => x.id === upcomingFilter);
-        return f && f.test ? thisWeek.filter(f.test) : thisWeek;
-      }, [thisWeek, upcomingFilter]);
+      const _uf = UPCOMING_FILTERS.find((x) => x.id === upcomingFilter);
+      const filteredUpcoming = _uf && _uf.test ? thisWeek.filter(_uf.test) : thisWeek;
 
-      const filteredTickets = React.useMemo(() => {
-        const f = TICKETS_FILTERS.find((x) => x.id === ticketsFilter);
-        return f && f.test ? onSale.filter(f.test) : onSale;
-      }, [onSale, ticketsFilter]);
+      const _tf = TICKETS_FILTERS.find((x) => x.id === ticketsFilter);
+      const filteredTickets = _tf && _tf.test ? onSale.filter(_tf.test) : onSale;
 
       return (
         <div className="page">
