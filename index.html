@@ -278,18 +278,14 @@
               {ev.venue && <><span className="ticket__dot">·</span><span>{ev.venue}</span></>}
             </div>
             {ev.blurb && <p className="event__blurb" style={{fontSize:'13px',marginTop:'8px'}}>{ev.blurb}</p>}
-            <div className="ticket__foot">
-              <div className="ticket__price">
-                {ev.price && ev.price !== 'Free' && <span className="ticket__price-lbl">From</span>}
-                <span className="ticket__price-val">{ev.price || 'Free'}</span>
+            {ev.price && (
+              <div className="ticket__foot">
+                <div className="ticket__price">
+                  {ev.price !== 'Free' && <span className="ticket__price-lbl">From</span>}
+                  <span className="ticket__price-val">{ev.price}</span>
+                </div>
               </div>
-              <a href={ev.source_url || '#'} target="_blank" rel="noopener" className="ticket__book">
-                Book
-                <svg width="11" height="9" viewBox="0 0 14 10" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <path d="M1 5h12M9 1l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </a>
-            </div>
+            )}
           </div>
         </article>
       );
@@ -324,12 +320,6 @@
           <nav className="topnav" aria-label="Primary">
             <a href="#this-week">This week</a>
             <a href="#tickets">Tickets on sale</a>
-            <a href="#list-your-event" className="topnav__cta">
-              List your event
-              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6">
-                <path d="M3 11 11 3M5 3h6v6" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
-            </a>
           </nav>
         </header>
       );
@@ -378,33 +368,6 @@
       );
     }
 
-    function ListYourEventCTA() {
-      return (
-        <section className="cta" id="list-your-event">
-          <div className="cta__inner">
-            <div>
-              <div className="cta__pre">For organisers · free, forever</div>
-              <h2 className="cta__title">
-                Running something in town? <em>Get it on the list.</em>
-              </h2>
-              <p className="cta__lede">
-                Pub gigs, open days, junior football fixtures, baby groups, theatre, talks — if it's in or near Biggleswade and open to the public, it belongs here.
-              </p>
-            </div>
-            <div className="cta__actions">
-              <a href="mailto:hello@eventfinder.info" className="btn btn--ink-fill">
-                List your event
-                <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <path d="M1 5h12M9 1l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </a>
-              <div className="cta__sub">Email us with the details. We'll add it within a day.</div>
-            </div>
-          </div>
-        </section>
-      );
-    }
-
     function Footer() {
       return (
         <footer className="footer">
@@ -419,11 +382,6 @@
               <h4>The site</h4>
               <a href="#this-week">This week</a>
               <a href="#tickets">Tickets on sale</a>
-              <a href="#list-your-event">List your event</a>
-            </div>
-            <div className="footer__col">
-              <h4>Contact</h4>
-              <a href="mailto:hello@eventfinder.info">hello@eventfinder.info</a>
             </div>
           </div>
         </footer>
@@ -519,7 +477,6 @@
             )}
           </section>
 
-          <ListYourEventCTA/>
           <Footer/>
         </div>
       );
