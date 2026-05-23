@@ -1,0 +1,8 @@
+[
+  {
+    "slug": "biggleswade",
+    "label": "Biggleswade",
+    "file": "data/biggleswade.json",
+    "radius_km": 10
+  }
+]
