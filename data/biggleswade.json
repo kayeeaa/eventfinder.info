@@ -1,7 +1,113 @@
 {
   "town": "Biggleswade",
   "radius_km": 10,
-  "generated_at": "",
-  "this_week": [],
-  "on_sale": []
+  "generated_at": "2026-05-23T15:09:02Z",
+  "this_week": [
+    {
+      "name": "Artisan Craft Market",
+      "address": "Market Square, Biggleswade, Bedfordshire",
+      "date": "23 May 2026",
+      "time": "08:00",
+      "cost": "",
+      "source_url": "https://biggleswadetowncouncil.gov.uk/events-calendar"
+    },
+    {
+      "name": "Run The Wade",
+      "address": "Biggleswade, Bedfordshire",
+      "date": "24 May 2026",
+      "time": "",
+      "cost": "",
+      "source_url": "https://biggleswadetowncouncil.gov.uk/category/news/events"
+    },
+    {
+      "name": "Craft Fair",
+      "address": "Biggleswade Trinity Methodist Church, Biggleswade, Bedfordshire",
+      "date": "30 May 2026",
+      "time": "",
+      "cost": "",
+      "source_url": "https://www.stallfinder.com/event/county/bedfordshire/0"
+    },
+    {
+      "name": "Wings and Wheels",
+      "address": "Shuttleworth, Old Warden, Biggleswade, SG18 9EP",
+      "date": "30 May 2026",
+      "time": "10:00",
+      "cost": "",
+      "source_url": "https://www.shuttleworth.org/wings-and-wheels"
+    }
+  ],
+  "on_sale": [
+    {
+      "name": "BATS presents Twelfth Night",
+      "address": "Bigg Theatre, Biggleswade",
+      "date": "11 June 2026",
+      "time": "",
+      "cost": "",
+      "source_url": "https://www.instagram.com/p/DHoe2_4IAnT"
+    },
+    {
+      "name": "A Night at the Musicals",
+      "address": "Biggleswade Academy, Bedfordshire, SG18 8JU",
+      "date": "01 July 2026",
+      "time": "",
+      "cost": "",
+      "source_url": "https://www.ticketsource.com/biggleswadeacademy-anightatthemusicals/a-night-at-the-musicals/e-yzrvqy"
+    },
+    {
+      "name": "Annual Aviation Paintings of the Year Exhibition",
+      "address": "Shuttleworth, Old Warden, Biggleswade",
+      "date": "06 June 2026",
+      "time": "",
+      "cost": "",
+      "source_url": "https://www.shuttleworth.org"
+    },
+    {
+      "name": "Gyro World Record Attempt",
+      "address": "Shuttleworth, Old Warden, Biggleswade",
+      "date": "13 June 2026",
+      "time": "",
+      "cost": "",
+      "source_url": "https://www.shuttleworth.org"
+    },
+    {
+      "name": "Biggleswade & District Choral Society Concert",
+      "address": "St Andrew's Church, Biggleswade",
+      "date": "18 July 2026",
+      "time": "19:30",
+      "cost": "£12",
+      "source_url": "http://biggleschoral.org.uk?page_id=71"
+    },
+    {
+      "name": "Bedfordshire Steam and Country Fayre 2026",
+      "address": "",
+      "date": "",
+      "time": "",
+      "cost": "£17.00",
+      "source_url": "https://www.ticketebo.co.uk/bedford-steam-engine-preservation-society/steam-and-country-fayre-2026"
+    },
+    {
+      "name": "Sandy Spring Market 2026",
+      "address": "Sandy, Bedfordshire",
+      "date": "",
+      "time": "",
+      "cost": "Adult: Free, Child: £5",
+      "source_url": "https://whatsupbeds.com/events/18616"
+    },
+    {
+      "name": "Woodford NT Outing to Shuttleworth House and Historic Aircraft and Motor Museum",
+      "address": "Shuttleworth House, Old Warden, Biggleswade",
+      "date": "02 June 2026",
+      "time": "09:30",
+      "cost": "",
+      "source_url": "https://www.ticketsource.com/whats-on/biggleswade"
+    },
+    {
+      "name": "An Evening with Charlie Beech (The Biggleswade Weekend)",
+      "address": "Biggleswade",
+      "date": "31 July 2026",
+      "time": "",
+      "cost": "",
+      "source_url": "https://www.instagram.com/p/DVeUQlvgEmy"
+    }
+  ]
 }
