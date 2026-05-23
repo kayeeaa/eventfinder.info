@@ -1,14 +1,535 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>What's On Near You</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>eventfinder.info — Biggleswade · What's on this week</title>
+  <meta name="description" content="A free, AI-curated directory of events in Biggleswade — this week's listings plus everything with tickets on sale now.">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&family=Geist:wght@300..700&family=Geist+Mono:wght@300..600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h1>What's On Near Biggleswade</h1>
-  <div id="app">Loading...</div>
-  <script src="app.js"></script>
+  <div id="root"></div>
+
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- ── App ─────────────────────────────────────────────────────────────── -->
+  <script type="text/babel">
+    const CATEGORIES = [
+      { id: 'all',       label: 'Everything' },
+      { id: 'market',    label: 'Markets' },
+      { id: 'music',     label: 'Music' },
+      { id: 'family',    label: 'Family' },
+      { id: 'food',      label: 'Food & Drink' },
+      { id: 'outdoors',  label: 'Outdoors' },
+      { id: 'stage',     label: 'Stage' },
+      { id: 'community', label: 'Community' },
+      { id: 'sport',     label: 'Sport' },
+      { id: 'talk',      label: 'Talks' },
+    ];
+
+    const MONTHS_PARSE = {
+      january:0, february:1, march:2, april:3, may:4, june:5,
+      july:6, august:7, september:8, october:9, november:10, december:11,
+    };
+    const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const DAYS_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const DAY_MS = 86400000;
+
+    const sameDay = (a, b) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+
+    const fmtTime = (d) => {
+      const h = d.getHours(), m = d.getMinutes();
+      const suf = h < 12 ? 'am' : 'pm';
+      const h12 = ((h + 11) % 12) + 1;
+      return m === 0 ? `${h12}${suf}` : `${h12}.${String(m).padStart(2,'0')}${suf}`;
+    };
+
+    const fmtDayLabel = (d, today) => {
+      if (sameDay(d, today)) return 'Today';
+      if (sameDay(d, addDays(today, 1))) return 'Tomorrow';
+      const diff = Math.round((startOfDay(d) - startOfDay(today)) / DAY_MS);
+      if (diff > 1 && diff < 7) return DAYS_FULL[d.getDay()];
+      return `${DAYS_FULL[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+    };
+
+    function parseEventDate(dateStr, timeStr) {
+      if (!dateStr) return null;
+      // Handle ranges like "23-24 May 2026" or "31 May – 1 June 2026" — use first date
+      const firstPart = dateStr.split(/[–\-]/)[0].trim();
+      const parts = firstPart.replace(/\s+/g, ' ').trim().split(' ');
+      if (parts.length < 3) return null;
+      const day = parseInt(parts[0]);
+      const month = MONTHS_PARSE[parts[1].toLowerCase()];
+      const year = parseInt(parts[2]);
+      if (isNaN(day) || month === undefined || isNaN(year)) return null;
+      let h = 0, m = 0;
+      if (timeStr) { const t = timeStr.split(':'); h = parseInt(t[0])||0; m = parseInt(t[1])||0; }
+      return new Date(year, month, day, h, m);
+    }
+
+    function mapEvent(item, isOnSale) {
+      const date = parseEventDate(item.date, item.time);
+      if (!date && !isOnSale) return null; // upcoming events need a date; on-sale can be undated
+      const safeDate = date || new Date(9999, 0, 1); // undated on-sale events sort to end
+      const slug = (item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
+      const dateSlug = item.date || 'tbd';
+      return {
+        id: `${slug}-${dateSlug}`,
+        title: item.name || '',
+        blurb: item.blurb || '',
+        date: safeDate,
+        dateStr: item.date || '',
+        venue: item.address || '',
+        category: item.category || 'community',
+        price: item.cost || 'Free',
+        placeholder: (item.name || '').toLowerCase(),
+        image_url: item.image_url || '',
+        source_url: item.source_url || '',
+        ticketed: isOnSale,
+      };
+    }
+
+    function Placeholder({ label, ratio = '4 / 3', tone = 'paper' }) {
+      const tint = {
+        paper: { bg: 'var(--c-paper)', ink: 'var(--c-ink-3)' },
+        stone: { bg: 'var(--c-stone)', ink: 'var(--c-ink-2)' },
+        deep:  { bg: 'var(--c-bark)',  ink: 'rgba(245,241,232,.7)' },
+      }[tone] || { bg: 'var(--c-paper)', ink: 'var(--c-ink-3)' };
+      return (
+        <div className="placeholder" style={{ aspectRatio: ratio, background: tint.bg, color: tint.ink }}>
+          <svg className="placeholder__stripes" aria-hidden="true" preserveAspectRatio="none" viewBox="0 0 100 100">
+            <defs>
+              <pattern id="ph-strp" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-22)">
+                <line x1="0" y1="0" x2="0" y2="6" stroke="currentColor" strokeWidth=".6" opacity=".22"/>
+              </pattern>
+            </defs>
+            <rect width="100" height="100" fill="url(#ph-strp)"/>
+          </svg>
+          <span className="placeholder__label">▱ {label}</span>
+        </div>
+      );
+    }
+
+    function EventImage({ ev, ratio = '4 / 3', tone = 'paper' }) {
+      if (ev.image_url) {
+        return (
+          <div style={{ aspectRatio: ratio, overflow: 'hidden', background: 'var(--c-stone)' }}>
+            <img src={ev.image_url} alt={ev.title}
+                 style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                 onError={(e) => { e.target.style.display='none'; }} />
+          </div>
+        );
+      }
+      return <Placeholder label={ev.placeholder} ratio={ratio} tone={tone} />;
+    }
+
+    function CategoryGlyph({ id }) {
+      const glyphs = {
+        market:    <rect x="2" y="2" width="8" height="8" fill="currentColor"/>,
+        music:     <circle cx="6" cy="6" r="4" fill="currentColor"/>,
+        family:    <circle cx="6" cy="6" r="3.5" fill="none" stroke="currentColor" strokeWidth="1.2"/>,
+        food:      <path d="M2 8h8M2 6h8M2 4h8" stroke="currentColor" strokeWidth="1.2"/>,
+        outdoors:  <path d="M6 2L2 10h8z" fill="currentColor"/>,
+        stage:     <path d="M2 6 6 2l4 4-4 4z" fill="currentColor"/>,
+        community: <path d="M2 6 6 2l4 4-4 4z" fill="none" stroke="currentColor" strokeWidth="1.2"/>,
+        sport:     <path d="M2 10 10 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>,
+        talk:      <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>,
+      };
+      return (
+        <svg className="cat-glyph" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+          {glyphs[id] || glyphs.community}
+        </svg>
+      );
+    }
+
+    function DateStamp({ date, size = 'md' }) {
+      return (
+        <div className={`stamp stamp--${size}`}>
+          <div className="stamp__dow">{DAYS[date.getDay()]}</div>
+          <div className="stamp__day">{date.getDate()}</div>
+          <div className="stamp__mon">{MONTHS[date.getMonth()]}</div>
+        </div>
+      );
+    }
+
+    function FilterBar({ filters, active, onChange }) {
+      return (
+        <div className="filter-bar" role="toolbar">
+          <span className="filter-bar__ai" aria-hidden="true">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+              <path d="M6 1.2 7.1 4.9 10.8 6 7.1 7.1 6 10.8 4.9 7.1 1.2 6 4.9 4.9z" fill="currentColor"/>
+            </svg>
+            Filter
+          </span>
+          <div className="filter-bar__pills">
+            {filters.map((f) => (
+              <button key={f.id} type="button"
+                      className={`filter-pill${active === f.id ? ' filter-pill--on' : ''}`}
+                      onClick={() => onChange(f.id)} aria-pressed={active === f.id}>
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    function EventCard({ ev }) {
+      const cat = CATEGORIES.find((c) => c.id === ev.category);
+      const isFree = /free/i.test(ev.price || '');
+      const hasTime = ev.date.getHours() !== 0 || ev.date.getMinutes() !== 0;
+      return (
+        <article className={`event${ev.featured ? ' event--featured' : ''}`}>
+          <a href={ev.source_url || '#'} target="_blank" rel="noopener" className="event__media-link">
+            <div className="event__media">
+              <EventImage ev={ev} ratio="4 / 3" tone="paper" />
+            </div>
+          </a>
+          <div className="event__body">
+            <div className="event__top">
+              <span className="event__cat">
+                <CategoryGlyph id={ev.category}/> {cat ? cat.label : ev.category}
+              </span>
+              {hasTime && <span className="event__time">{fmtTime(ev.date)}</span>}
+              {ev.price && <span className={`event__price${isFree ? ' free' : ''}`}>{ev.price}</span>}
+            </div>
+            <a href={ev.source_url || '#'} target="_blank" rel="noopener">
+              <h3 className="event__title">{ev.title}</h3>
+            </a>
+            {ev.blurb && <p className="event__blurb">{ev.blurb}</p>}
+            {ev.venue && <div className="event__venue">{ev.venue}</div>}
+          </div>
+        </article>
+      );
+    }
+
+    function ListView({ events, today }) {
+      if (events.length === 0) {
+        return (
+          <div className="empty">
+            <h3>Nothing in that filter.</h3>
+            <p>Try a different one, or show all.</p>
+          </div>
+        );
+      }
+      const groups = {};
+      for (const ev of events) {
+        const k = `${ev.date.getFullYear()}-${ev.date.getMonth()}-${ev.date.getDate()}`;
+        (groups[k] = groups[k] || []).push(ev);
+      }
+      const ordered = Object.entries(groups)
+        .map(([k, list]) => ({ key: k, date: list[0].date, list }))
+        .sort((a, b) => a.date - b.date);
+      return (
+        <div className="list">
+          {ordered.map((g) => (
+            <section key={g.key} className="day-group">
+              <header className="day-group__label">
+                <div className="day-group__name">{fmtDayLabel(g.date, today)}</div>
+                <small>{g.list.length} event{g.list.length !== 1 ? 's' : ''}</small>
+                <DateStamp date={g.date}/>
+              </header>
+              <div className="day-group__items">
+                {g.list.map((ev) => <EventCard key={ev.id} ev={ev}/>)}
+              </div>
+            </section>
+          ))}
+        </div>
+      );
+    }
+
+    function TicketCard({ ev }) {
+      const cat = CATEGORIES.find((c) => c.id === ev.category);
+      const hasValidDate = ev.dateStr && ev.date.getFullYear() < 9000;
+      return (
+        <article className="ticket">
+          <div className="ticket__media">
+            <EventImage ev={ev} ratio="3 / 2" tone="stone"/>
+            {hasValidDate && (
+              <div className="ticket__stamp">
+                <DateStamp date={ev.date}/>
+              </div>
+            )}
+          </div>
+          <div className="ticket__body">
+            <div className="ticket__cat">
+              <CategoryGlyph id={ev.category}/> {cat ? cat.label : ev.category}
+            </div>
+            <a href={ev.source_url || '#'} target="_blank" rel="noopener">
+              <h3 className="ticket__title">{ev.title}</h3>
+            </a>
+            <div className="ticket__meta">
+              {hasValidDate && <span>{DAYS[ev.date.getDay()]} {ev.date.getDate()} {MONTHS[ev.date.getMonth()]}</span>}
+              {ev.venue && <><span className="ticket__dot">·</span><span>{ev.venue}</span></>}
+            </div>
+            {ev.blurb && <p className="event__blurb" style={{fontSize:'13px',marginTop:'8px'}}>{ev.blurb}</p>}
+            <div className="ticket__foot">
+              <div className="ticket__price">
+                {ev.price && ev.price !== 'Free' && <span className="ticket__price-lbl">From</span>}
+                <span className="ticket__price-val">{ev.price || 'Free'}</span>
+              </div>
+              <a href={ev.source_url || '#'} target="_blank" rel="noopener" className="ticket__book">
+                Book
+                <svg width="11" height="9" viewBox="0 0 14 10" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M1 5h12M9 1l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </article>
+      );
+    }
+
+    const UPCOMING_FILTERS = [
+      { id: 'all',      label: 'All' },
+      { id: 'free',     label: 'Free entry',       test: (e) => /free/i.test(e.price || '') },
+      { id: 'evening',  label: 'Evenings',          test: (e) => e.date.getHours() >= 18 },
+      { id: 'outdoors', label: 'Outdoors',          test: (e) => ['outdoors','sport','market','community'].includes(e.category) },
+      { id: 'family',   label: 'Family-friendly',   test: (e) => ['family','community','market'].includes(e.category) },
+    ];
+
+    const TICKETS_FILTERS = [
+      { id: 'all',       label: 'All' },
+      { id: 'under10',   label: 'Under £10', test: (e) => {
+        const n = parseFloat(String(e.price).replace(/[^\d.]/g, ''));
+        return n > 0 && n < 10;
+      }},
+      { id: 'music',    label: 'Live music',   test: (e) => e.category === 'music' },
+      { id: 'family',   label: 'For families', test: (e) => ['family','community'].includes(e.category) },
+      { id: 'stage',    label: 'Stage & arts', test: (e) => ['stage','music','talk'].includes(e.category) },
+    ];
+
+    function TopBar() {
+      return (
+        <header className="topbar">
+          <a href="#" className="brand" aria-label="eventfinder.info — Biggleswade">
+            <span className="brand__mark">eventfinder<span className="brand__tld">.info</span></span>
+            <span className="brand__sub">Biggleswade · SG18</span>
+          </a>
+          <nav className="topnav" aria-label="Primary">
+            <a href="#this-week">This week</a>
+            <a href="#tickets">Tickets on sale</a>
+            <a href="#list-your-event" className="topnav__cta">
+              List your event
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.6">
+                <path d="M3 11 11 3M5 3h6v6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </a>
+          </nav>
+        </header>
+      );
+    }
+
+    function Hero({ today, thisWeekCount, ticketCount, generatedAt }) {
+      const dateLine = `${DAYS_FULL[today.getDay()]} ${today.getDate()} ${MONTHS_FULL[today.getMonth()]}`;
+      const updatedDate = generatedAt ? generatedAt.slice(0, 10) : dateLine.toLowerCase();
+      return (
+        <section className="hero hero--green">
+          <div className="hero__panel">
+            <div className="hero__copy">
+              <div className="hero__overline hero__overline--on-green">
+                <span className="ai-badge" aria-hidden="true">
+                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
+                    <path d="M6 1.2 7.1 4.9 10.8 6 7.1 7.1 6 10.8 4.9 7.1 1.2 6 4.9 4.9z" fill="currentColor"/>
+                  </svg>
+                  AI-found
+                </span>
+                <span className="hero__sep" aria-hidden="true">·</span>
+                <span>Updated {updatedDate}</span>
+              </div>
+              <h1 className="hero__title">What's on<br/><em>in Biggleswade.</em></h1>
+              <p className="hero__lede hero__lede--on-green">
+                A free, AI-curated directory of every event in town — we continually scan local venues, councils, clubs and pubs so you don't have to.
+              </p>
+              <div className="hero__trust">
+                <span>Found by AI</span>
+                <span className="hero__trust-dot"/>
+                <span>Checked by people</span>
+              </div>
+            </div>
+            <aside className="hero__rail" aria-label="At a glance">
+              <div className="i-stat">
+                <div className="i-stat__num">{thisWeekCount}</div>
+                <div className="i-stat__lbl">events<br/>this week</div>
+              </div>
+              <div className="i-stat__rule i-stat__rule--h" aria-hidden="true"/>
+              <div className="i-stat">
+                <div className="i-stat__num">{ticketCount}</div>
+                <div className="i-stat__lbl">tickets<br/>on sale now</div>
+              </div>
+            </aside>
+          </div>
+        </section>
+      );
+    }
+
+    function ListYourEventCTA() {
+      return (
+        <section className="cta" id="list-your-event">
+          <div className="cta__inner">
+            <div>
+              <div className="cta__pre">For organisers · free, forever</div>
+              <h2 className="cta__title">
+                Running something in town? <em>Get it on the list.</em>
+              </h2>
+              <p className="cta__lede">
+                Pub gigs, open days, junior football fixtures, baby groups, theatre, talks — if it's in or near Biggleswade and open to the public, it belongs here.
+              </p>
+            </div>
+            <div className="cta__actions">
+              <a href="mailto:hello@eventfinder.info" className="btn btn--ink-fill">
+                List your event
+                <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" strokeWidth="1.6">
+                  <path d="M1 5h12M9 1l4 4-4 4" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </a>
+              <div className="cta__sub">Email us with the details. We'll add it within a day.</div>
+            </div>
+          </div>
+        </section>
+      );
+    }
+
+    function Footer() {
+      return (
+        <footer className="footer">
+          <div>
+            <div className="footer__brand">
+              eventfinder<span className="brand__tld">.info</span>
+            </div>
+            <div>Biggleswade · SG18 · Bedfordshire</div>
+          </div>
+          <div className="footer__cols">
+            <div className="footer__col">
+              <h4>The site</h4>
+              <a href="#this-week">This week</a>
+              <a href="#tickets">Tickets on sale</a>
+              <a href="#list-your-event">List your event</a>
+            </div>
+            <div className="footer__col">
+              <h4>Contact</h4>
+              <a href="mailto:hello@eventfinder.info">hello@eventfinder.info</a>
+            </div>
+          </div>
+        </footer>
+      );
+    }
+
+    function App() {
+      const [evData, setEvData] = React.useState(null);
+      const [error, setError] = React.useState(null);
+      const [upcomingFilter, setUpcomingFilter] = React.useState('all');
+      const [ticketsFilter, setTicketsFilter] = React.useState('all');
+
+      React.useEffect(() => {
+        fetch('data/biggleswade.json')
+          .then((r) => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          })
+          .then((json) => {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const thisWeek = (json.this_week || []).map((e) => mapEvent(e, false)).filter(Boolean);
+            const onSale = (json.on_sale || []).map((e) => mapEvent(e, true)).filter(Boolean);
+            setEvData({ today, thisWeek, onSale, generatedAt: json.generated_at || '' });
+          })
+          .catch((err) => setError(err.message));
+      }, []);
+
+      if (error) return (
+        <div style={{ padding: '80px 40px', textAlign: 'center', color: 'var(--c-ink-3)' }}>
+          <p>Could not load events. Please try again later.</p>
+        </div>
+      );
+
+      if (!evData) return (
+        <div style={{ padding: '80px 40px', textAlign: 'center', color: 'var(--c-ink-3)',
+                      fontFamily: 'var(--f-mono)', fontSize: '13px', letterSpacing: '.08em' }}>
+          Loading events…
+        </div>
+      );
+
+      const { today, thisWeek, onSale, generatedAt } = evData;
+      const weekEnd = addDays(today, 7);
+
+      const filteredUpcoming = React.useMemo(() => {
+        const f = UPCOMING_FILTERS.find((x) => x.id === upcomingFilter);
+        return f && f.test ? thisWeek.filter(f.test) : thisWeek;
+      }, [thisWeek, upcomingFilter]);
+
+      const filteredTickets = React.useMemo(() => {
+        const f = TICKETS_FILTERS.find((x) => x.id === ticketsFilter);
+        return f && f.test ? onSale.filter(f.test) : onSale;
+      }, [onSale, ticketsFilter]);
+
+      return (
+        <div className="page">
+          <TopBar/>
+          <Hero today={today} thisWeekCount={thisWeek.length}
+                ticketCount={onSale.length} generatedAt={generatedAt}/>
+
+          <section className="section" id="this-week">
+            <header className="section__hd">
+              <div className="section__tab">Upcoming</div>
+              <div className="section__hd-row">
+                <h2 className="section__title">This week <em>in Biggleswade</em></h2>
+                <div className="section__sub">
+                  {thisWeek.length} event{thisWeek.length !== 1 ? 's' : ''} ·{' '}
+                  {DAYS[today.getDay()]} {today.getDate()} {MONTHS[today.getMonth()]}
+                  {' '}—{' '}
+                  {DAYS[addDays(today,6).getDay()]} {addDays(today,6).getDate()} {MONTHS[addDays(today,6).getMonth()]}
+                </div>
+              </div>
+            </header>
+            <FilterBar filters={UPCOMING_FILTERS} active={upcomingFilter} onChange={setUpcomingFilter}/>
+            <ListView events={filteredUpcoming} today={today}/>
+          </section>
+
+          <section className="section" id="tickets">
+            <header className="section__hd">
+              <div className="section__tab">On sale now</div>
+              <div className="section__hd-row">
+                <h2 className="section__title">Tickets <em>on sale</em></h2>
+                <div className="section__sub">
+                  {onSale.length} event{onSale.length !== 1 ? 's' : ''} · sorted by date
+                </div>
+              </div>
+            </header>
+            <FilterBar filters={TICKETS_FILTERS} active={ticketsFilter} onChange={setTicketsFilter}/>
+            {filteredTickets.length === 0 ? (
+              <div className="empty">
+                <h3>No tickets match that filter.</h3>
+                <p>Try a different one, or show all.</p>
+              </div>
+            ) : (
+              <div className="ticket-grid">
+                {filteredTickets.map((ev) => <TicketCard key={ev.id} ev={ev}/>)}
+              </div>
+            )}
+          </section>
+
+          <ListYourEventCTA/>
+          <Footer/>
+        </div>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+  </script>
 </body>
 </html>
