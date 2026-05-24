@@ -1806,3 +1806,72 @@ body[data-density="spacious"] { --gap-section: 120px; --gap-card: 32px; --pad-ca
   color: var(--c-ink-3);
   font-size: 15px;
 }
+
+/* ── Date filter bar (All / This week / Next week + date picker) ─────────── */
+
+.date-filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -8px 0 28px;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-rule);
+  flex-wrap: wrap;
+}
+.date-filter-bar__tabs {
+  display: inline-flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+.date-tab {
+  padding: 6px 16px;
+  background: transparent;
+  border: 1px solid var(--c-rule);
+  border-radius: 999px;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--c-ink-2);
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.date-tab:hover {
+  border-color: var(--c-forest);
+  color: var(--c-forest);
+}
+.date-tab--on {
+  background: var(--c-forest);
+  border-color: var(--c-forest);
+  color: var(--c-cream);
+}
+.date-tab--on:hover {
+  background: var(--c-forest);
+  color: var(--c-cream);
+}
+.date-picker {
+  font-family: var(--f-mono);
+  font-size: 11px;
+  letter-spacing: .06em;
+  color: var(--c-ink-2);
+  border: 1px solid var(--c-rule);
+  border-radius: 6px;
+  padding: 6px 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color .15s;
+  min-width: 140px;
+}
+.date-picker:focus {
+  outline: none;
+  border-color: var(--c-forest);
+}
+.date-picker::-webkit-calendar-picker-indicator {
+  opacity: 0.5;
+  cursor: pointer;
+}
+@media (max-width: 580px) {
+  .date-filter-bar { gap: 8px; }
+  .date-picker { min-width: 0; width: 100%; }
+}

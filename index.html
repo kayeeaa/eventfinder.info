@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>eventfinder.info — Biggleswade · What's on this week</title>
-  <meta name="description" content="A free, AI-curated directory of events near Biggleswade — this week's listings plus everything with tickets on sale now.">
+  <title>eventfinder.info — Biggleswade · What's on near you</title>
+  <meta name="description" content="A free, AI-curated directory of events near Biggleswade — upcoming listings for the next month plus everything with tickets on sale now.">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -291,6 +291,48 @@
       );
     }
 
+    function applyDateFilter(events, filter, today) {
+      if (filter === 'all') return events;
+      if (filter === 'this_week') {
+        const end = addDays(today, 6);
+        return events.filter((e) => e.date >= today && e.date <= end);
+      }
+      if (filter === 'next_week') {
+        const start = addDays(today, 7);
+        const end = addDays(today, 13);
+        return events.filter((e) => e.date >= start && e.date <= end);
+      }
+      // specific date string YYYY-MM-DD
+      const d = new Date(filter + 'T00:00:00');
+      return events.filter((e) => e.date.toDateString() === d.toDateString());
+    }
+
+    function DateFilterBar({ active, onTab, onDate }) {
+      const tabs = [
+        { id: 'all',       label: 'All' },
+        { id: 'this_week', label: 'This week' },
+        { id: 'next_week', label: 'Next week' },
+      ];
+      const pickerVal = !['all','this_week','next_week'].includes(active) ? active : '';
+      return (
+        <div className="date-filter-bar">
+          <div className="date-filter-bar__tabs">
+            {tabs.map((t) => (
+              <button key={t.id} type="button"
+                      className={`date-tab${active === t.id ? ' date-tab--on' : ''}`}
+                      onClick={() => onTab(t.id)} aria-pressed={active === t.id}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <input type="date" className="date-picker"
+                 value={pickerVal}
+                 aria-label="Jump to date"
+                 onChange={(e) => e.target.value ? onDate(e.target.value) : onTab('all')}/>
+        </div>
+      );
+    }
+
     const UPCOMING_FILTERS = [
       { id: 'all',      label: 'All' },
       { id: 'free',     label: 'Free entry',       test: (e) => e.price && /\bfree\b/i.test(e.price) },
@@ -318,7 +360,7 @@
             <span className="brand__sub">Biggleswade · SG18</span>
           </a>
           <nav className="topnav" aria-label="Primary">
-            <a href="#this-week">This week</a>
+            <a href="#this-week">Upcoming</a>
             <a href="#tickets">Tickets on sale</a>
           </nav>
         </header>
@@ -427,7 +469,7 @@
           <div className="hero-meta-strip" aria-label="At a glance">
             <div className="hero-meta-strip__stat">
               <span className="hero-meta-strip__num">{thisWeekCount}</span>
-              <span className="hero-meta-strip__lbl">events<br/>this week</span>
+              <span className="hero-meta-strip__lbl">upcoming<br/>events</span>
             </div>
             <div className="hero-meta-strip__stat">
               <span className="hero-meta-strip__num">{ticketCount}</span>
@@ -450,7 +492,7 @@
           <div className="footer__cols">
             <div className="footer__col">
               <h4>The site</h4>
-              <a href="#this-week">This week</a>
+              <a href="#this-week">Upcoming</a>
               <a href="#tickets">Tickets on sale</a>
             </div>
           </div>
@@ -463,6 +505,7 @@
       const [error, setError] = React.useState(null);
       const [upcomingFilter, setUpcomingFilter] = React.useState('all');
       const [ticketsFilter, setTicketsFilter] = React.useState('all');
+      const [dateFilter, setDateFilter] = React.useState('all');
 
       React.useEffect(() => {
         fetch('data/biggleswade.json')
@@ -496,7 +539,8 @@
       const { today, thisWeek, onSale, generatedAt } = evData;
 
       const _uf = UPCOMING_FILTERS.find((x) => x.id === upcomingFilter);
-      const filteredUpcoming = _uf && _uf.test ? thisWeek.filter(_uf.test) : thisWeek;
+      const categoryFiltered = _uf && _uf.test ? thisWeek.filter(_uf.test) : thisWeek;
+      const filteredUpcoming = applyDateFilter(categoryFiltered, dateFilter, today);
 
       const _tf = TICKETS_FILTERS.find((x) => x.id === ticketsFilter);
       const filteredTickets = _tf && _tf.test ? onSale.filter(_tf.test) : onSale;
@@ -511,16 +555,19 @@
             <header className="section__hd">
               <div className="section__tab">Upcoming</div>
               <div className="section__hd-row">
-                <h2 className="section__title">This week <em>near Biggleswade</em></h2>
+                <h2 className="section__title">Events <em>near Biggleswade</em></h2>
                 <div className="section__sub">
-                  {thisWeek.length} event{thisWeek.length !== 1 ? 's' : ''} ·{' '}
+                  {filteredUpcoming.length} event{filteredUpcoming.length !== 1 ? 's' : ''} ·{' '}
                   {DAYS[today.getDay()]} {today.getDate()} {MONTHS[today.getMonth()]}
                   {' '}—{' '}
-                  {DAYS[addDays(today,6).getDay()]} {addDays(today,6).getDate()} {MONTHS[addDays(today,6).getMonth()]}
+                  {DAYS[addDays(today,30).getDay()]} {addDays(today,30).getDate()} {MONTHS[addDays(today,30).getMonth()]}
                 </div>
               </div>
             </header>
             <FilterBar filters={UPCOMING_FILTERS} active={upcomingFilter} onChange={setUpcomingFilter}/>
+            <DateFilterBar active={dateFilter}
+                           onTab={(id) => setDateFilter(id)}
+                           onDate={(d) => setDateFilter(d)}/>
             <ListView events={filteredUpcoming} today={today}/>
           </section>
 
