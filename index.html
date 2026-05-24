@@ -308,12 +308,19 @@
     }
 
     function DateFilterBar({ active, onTab, onDate }) {
+      const dateRef = React.useRef(null);
       const tabs = [
         { id: 'all',       label: 'All' },
         { id: 'this_week', label: 'This week' },
         { id: 'next_week', label: 'Next week' },
       ];
-      const pickerVal = !['all','this_week','next_week'].includes(active) ? active : '';
+      const isTab = ['all','this_week','next_week'].includes(active);
+
+      React.useEffect(() => {
+        if (!dateRef.current) return;
+        dateRef.current.value = isTab ? '' : active;
+      }, [active]);
+
       return (
         <div className="date-filter-bar">
           <div className="date-filter-bar__tabs">
@@ -326,8 +333,8 @@
             ))}
           </div>
           <input type="date" className="date-picker"
-                 value={pickerVal}
-                 aria-label="Jump to date"
+                 ref={dateRef}
+                 aria-label="Pick a date"
                  onChange={(e) => e.target.value ? onDate(e.target.value) : onTab('all')}/>
         </div>
       );
