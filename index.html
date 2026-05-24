@@ -620,6 +620,9 @@
       const [upcomingFilter, setUpcomingFilter] = React.useState('all');
       const [ticketsFilter, setTicketsFilter] = React.useState('all');
       const [dateFilter, setDateFilter] = React.useState('all');
+      const [ticketDateFilter, setTicketDateFilter] = React.useState('all');
+
+      React.useEffect(() => { setTicketDateFilter(dateFilter); }, [dateFilter]);
 
       React.useEffect(() => {
         fetch('data/biggleswade.json')
@@ -657,7 +660,8 @@
       const filteredUpcoming = applyDateFilter(categoryFiltered, dateFilter, today);
 
       const _tf = TICKETS_FILTERS.find((x) => x.id === ticketsFilter);
-      const filteredTickets = _tf && _tf.test ? onSale.filter(_tf.test) : onSale;
+      const categoryFilteredTickets = _tf && _tf.test ? onSale.filter(_tf.test) : onSale;
+      const filteredTickets = applyDateFilter(categoryFilteredTickets, ticketDateFilter, today);
 
       return (
         <div className="page">
@@ -691,11 +695,14 @@
               <div className="section__hd-row">
                 <h2 className="section__title">Tickets <em>on sale</em></h2>
                 <div className="section__sub">
-                  {onSale.length} event{onSale.length !== 1 ? 's' : ''} · sorted by date
+                  {filteredTickets.length} event{filteredTickets.length !== 1 ? 's' : ''} · sorted by date
                 </div>
               </div>
             </header>
             <FilterBar filters={TICKETS_FILTERS} active={ticketsFilter} onChange={setTicketsFilter}/>
+            <DateFilterBar active={ticketDateFilter}
+                           onTab={(id) => setTicketDateFilter(id)}
+                           onDates={(dates) => setTicketDateFilter(dates || 'all')}/>
             {filteredTickets.length === 0 ? (
               <div className="empty">
                 <h3>No tickets match that filter.</h3>
