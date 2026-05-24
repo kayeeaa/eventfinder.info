@@ -88,6 +88,7 @@
       const safeDate = date || new Date(9999, 0, 1); // undated on-sale events sort to end
       const slug = (item.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-');
       const dateSlug = item.date || 'tbd';
+      const imageUrl = (item.image_url || '').replace(/^http:\/\//i, 'https://');
       return {
         id: `${slug}-${dateSlug}`,
         title: item.name || '',
@@ -99,7 +100,7 @@
         tags: Array.isArray(item.tags) ? item.tags : [],
         price: item.cost || '',
         placeholder: (item.name || '').toLowerCase(),
-        image_url: item.image_url || '',
+        image_url: imageUrl,
         source_url: item.source_url || '',
         ticketed: isOnSale,
       };
