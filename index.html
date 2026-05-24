@@ -173,8 +173,22 @@
       const VISIBLE = 4;
       const visible = expanded ? filters : filters.slice(0, VISIBLE);
       const overflow = filters.length - VISIBLE;
+      const activeIds = Array.isArray(active) ? active : (active && active !== 'all' ? [active] : []);
+      const activeSet = new Set(activeIds);
+
+      const toggleFilter = (id) => {
+        if (id === 'all') {
+          onChange([]);
+          return;
+        }
+        const next = activeSet.has(id)
+          ? activeIds.filter((x) => x !== id)
+          : [...activeIds, id];
+        onChange(next);
+      };
+
       return (
-        <div className="filter-bar" role="toolbar">
+        <div className="filter-bar" role="toolbar" aria-label="Event filters">
           <span className="filter-bar__ai" aria-hidden="true">
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
               <path d="M6 1.2 7.1 4.9 10.8 6 7.1 7.1 6 10.8 4.9 7.1 1.2 6 4.9 4.9z" fill="currentColor"/>
@@ -184,8 +198,9 @@
           <div className="filter-bar__pills">
             {visible.map((f) => (
               <button key={f.id} type="button"
-                      className={`filter-pill${active === f.id ? ' filter-pill--on' : ''}`}
-                      onClick={() => onChange(f.id)} aria-pressed={active === f.id}>
+                      className={`filter-pill${(f.id === 'all' ? activeIds.length === 0 : activeSet.has(f.id)) ? ' filter-pill--on' : ''}`}
+                      onClick={() => toggleFilter(f.id)}
+                      aria-pressed={f.id === 'all' ? activeIds.length === 0 : activeSet.has(f.id)}>
                 {f.label}
               </button>
             ))}
@@ -318,27 +333,29 @@
       );
     }
 
+    function dateString(date) {
+      return date.getFullYear() + '-'
+        + String(date.getMonth() + 1).padStart(2, '0') + '-'
+        + String(date.getDate()).padStart(2, '0');
+    }
+
     function applyDateFilter(events, filter, today) {
-      if (filter === 'all') return events;
-      if (filter === 'this_week') {
-        const end = addDays(today, 6);
-        return events.filter((e) => e.date >= today && e.date <= end);
-      }
-      if (filter === 'next_week') {
-        const start = addDays(today, 7);
-        const end = addDays(today, 13);
-        return events.filter((e) => e.date >= start && e.date <= end);
-      }
-      if (Array.isArray(filter) && filter.length > 0) {
-        const dateSet = new Set(filter);
-        return events.filter((e) => {
-          const ds = e.date.getFullYear() + '-'
-            + String(e.date.getMonth() + 1).padStart(2, '0') + '-'
-            + String(e.date.getDate()).padStart(2, '0');
-          return dateSet.has(ds);
-        });
-      }
-      return events;
+      const filters = Array.isArray(filter) ? filter : (filter && filter !== 'all' ? [filter] : []);
+      if (filters.length === 0) return events;
+
+      const dateSet = new Set(filters.filter((f) => /^\d{4}-\d{2}-\d{2}$/.test(f)));
+      const hasThisWeek = filters.includes('this_week');
+      const hasNextWeek = filters.includes('next_week');
+      const thisWeekEnd = addDays(today, 6);
+      const nextWeekStart = addDays(today, 7);
+      const nextWeekEnd = addDays(today, 13);
+
+      return events.filter((e) => {
+        if (dateSet.has(dateString(e.date))) return true;
+        if (hasThisWeek && e.date >= today && e.date <= thisWeekEnd) return true;
+        if (hasNextWeek && e.date >= nextWeekStart && e.date <= nextWeekEnd) return true;
+        return false;
+      });
     }
 
     function DateFilterBar({ active, onTab, onDates, allLabel = 'All' }) {
@@ -347,8 +364,10 @@
       const [viewMonth, setViewMonth] = React.useState(() => new Date().getMonth());
       const wrapRef = React.useRef(null);
 
-      const isMulti = Array.isArray(active);
-      const selectedSet = new Set(isMulti ? active : []);
+      const activeValues = Array.isArray(active) ? active : (active && active !== 'all' ? [active] : []);
+      const selectedDates = activeValues.filter((v) => /^\d{4}-\d{2}-\d{2}$/.test(v));
+      const selectedSet = new Set(selectedDates);
+      const activeSet = new Set(activeValues);
       const todayStr = (() => {
         const t = new Date();
         return t.getFullYear() + '-'
@@ -388,14 +407,14 @@
 
       const toggleDate = (ds) => {
         const next = selectedSet.has(ds)
-          ? (isMulti ? active : []).filter((d) => d !== ds)
-          : [...(isMulti ? active : []), ds];
-        onDates(next.length > 0 ? next : null);
+          ? selectedDates.filter((d) => d !== ds)
+          : [...selectedDates, ds];
+        onDates([...activeValues.filter((v) => !/^\d{4}-\d{2}-\d{2}$/.test(v)), ...next]);
       };
 
       const monthLabel = new Date(viewYear, viewMonth).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
-      const pickerLabel = isMulti && active.length > 0
-        ? `${active.length} date${active.length !== 1 ? 's' : ''} selected`
+      const pickerLabel = selectedDates.length > 0
+        ? `${selectedDates.length} date${selectedDates.length !== 1 ? 's' : ''} selected`
         : 'Pick dates';
 
       const tabs = [
@@ -409,8 +428,9 @@
           <div className="date-filter-bar__tabs">
             {tabs.map((t) => (
               <button key={t.id} type="button"
-                      className={`date-tab${!isMulti && active === t.id ? ' date-tab--on' : ''}`}
-                      onClick={() => onTab(t.id)} aria-pressed={!isMulti && active === t.id}>
+                      className={`date-tab${(t.id === 'all' ? activeValues.length === 0 : activeSet.has(t.id)) ? ' date-tab--on' : ''}`}
+                      onClick={() => onTab(t.id)}
+                      aria-pressed={t.id === 'all' ? activeValues.length === 0 : activeSet.has(t.id)}>
                 {t.label}
               </button>
             ))}
@@ -418,7 +438,7 @@
 
           <div className="date-picker-wrap" ref={wrapRef}>
             <button type="button"
-                    className={`date-tab${isMulti && active.length > 0 ? ' date-tab--on' : ''}`}
+                    className={`date-tab${selectedDates.length > 0 ? ' date-tab--on' : ''}`}
                     onClick={() => setCalOpen((o) => !o)}
                     aria-expanded={calOpen}>
               <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden="true">
@@ -461,10 +481,10 @@
                     );
                   })}
                 </div>
-                {isMulti && active.length > 0 && (
+                {selectedDates.length > 0 && (
                   <div className="cal-footer">
                     <button type="button" className="cal-clear"
-                            onClick={() => { onDates(null); setCalOpen(false); }}>
+                            onClick={() => { onDates(activeValues.filter((v) => !/^\d{4}-\d{2}-\d{2}$/.test(v))); setCalOpen(false); }}>
                       Clear selection
                     </button>
                   </div>
@@ -488,6 +508,16 @@
         test: e => (e.tags || []).includes(key) || e.category === key,
       }));
       return [{ id: 'all', label: 'All', test: null }, ...filters];
+    }
+
+    function applyMultiFilter(events, filters, active) {
+      const activeIds = Array.isArray(active) ? active : (active && active !== 'all' ? [active] : []);
+      if (activeIds.length === 0) return events;
+      const selected = activeIds
+        .map((id) => filters.find((f) => f.id === id))
+        .filter((f) => f && f.test);
+      if (selected.length === 0) return events;
+      return events.filter((ev) => selected.some((f) => f.test(ev)));
     }
 
     function TopBar() {
@@ -641,10 +671,10 @@
     function App() {
       const [evData, setEvData] = React.useState(null);
       const [error, setError] = React.useState(null);
-      const [upcomingFilter, setUpcomingFilter] = React.useState('all');
-      const [ticketsFilter, setTicketsFilter] = React.useState('all');
-      const [dateFilter, setDateFilter] = React.useState('all');
-      const [ticketDateFilter, setTicketDateFilter] = React.useState('all');
+      const [upcomingFilter, setUpcomingFilter] = React.useState([]);
+      const [ticketsFilter, setTicketsFilter] = React.useState([]);
+      const [dateFilter, setDateFilter] = React.useState([]);
+      const [ticketDateFilter, setTicketDateFilter] = React.useState([]);
 
       React.useEffect(() => { setTicketDateFilter(dateFilter); }, [dateFilter]);
 
@@ -668,11 +698,11 @@
       const ticketsFilters  = React.useMemo(() => buildFilters(evData?.onSale),   [evData]);
 
       React.useEffect(() => {
-        if (!upcomingFilters.find(f => f.id === upcomingFilter)) setUpcomingFilter('all');
+        setUpcomingFilter((active) => active.filter((id) => upcomingFilters.find((f) => f.id === id)));
       }, [upcomingFilters]);
 
       React.useEffect(() => {
-        if (!ticketsFilters.find(f => f.id === ticketsFilter)) setTicketsFilter('all');
+        setTicketsFilter((active) => active.filter((id) => ticketsFilters.find((f) => f.id === id)));
       }, [ticketsFilters]);
 
       if (error) return (
@@ -690,12 +720,10 @@
 
       const { today, thisWeek, onSale, generatedAt } = evData;
 
-      const _uf = upcomingFilters.find((x) => x.id === upcomingFilter);
-      const categoryFiltered = _uf?.test ? thisWeek.filter(_uf.test) : thisWeek;
+      const categoryFiltered = applyMultiFilter(thisWeek, upcomingFilters, upcomingFilter);
       const filteredUpcoming = applyDateFilter(categoryFiltered, dateFilter, today);
 
-      const _tf = ticketsFilters.find((x) => x.id === ticketsFilter);
-      const categoryFilteredTickets = _tf?.test ? onSale.filter(_tf.test) : onSale;
+      const categoryFilteredTickets = applyMultiFilter(onSale, ticketsFilters, ticketsFilter);
       const filteredTickets = applyDateFilter(categoryFilteredTickets, ticketDateFilter, today);
 
       return (
@@ -719,8 +747,11 @@
             </header>
             <FilterBar filters={upcomingFilters} active={upcomingFilter} onChange={setUpcomingFilter}/>
             <DateFilterBar active={dateFilter}
-                           onTab={(id) => setDateFilter(id)}
-                           onDates={(dates) => setDateFilter(dates || 'all')}
+                           onTab={(id) => setDateFilter((active) => {
+                             if (id === 'all') return [];
+                             return active.includes(id) ? active.filter((x) => x !== id) : [...active, id];
+                           })}
+                           onDates={setDateFilter}
                            allLabel="This month"/>
             <ListView events={filteredUpcoming} today={today}/>
           </section>
@@ -737,8 +768,11 @@
             </header>
             <FilterBar filters={ticketsFilters} active={ticketsFilter} onChange={setTicketsFilter}/>
             <DateFilterBar active={ticketDateFilter}
-                           onTab={(id) => setTicketDateFilter(id)}
-                           onDates={(dates) => setTicketDateFilter(dates || 'all')}/>
+                           onTab={(id) => setTicketDateFilter((active) => {
+                             if (id === 'all') return [];
+                             return active.includes(id) ? active.filter((x) => x !== id) : [...active, id];
+                           })}
+                           onDates={setTicketDateFilter}/>
             {filteredTickets.length === 0 ? (
               <div className="empty">
                 <h3>No tickets match that filter.</h3>
