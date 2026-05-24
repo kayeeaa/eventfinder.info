@@ -302,40 +302,147 @@
         const end = addDays(today, 13);
         return events.filter((e) => e.date >= start && e.date <= end);
       }
-      // specific date string YYYY-MM-DD
-      const d = new Date(filter + 'T00:00:00');
-      return events.filter((e) => e.date.toDateString() === d.toDateString());
+      if (Array.isArray(filter) && filter.length > 0) {
+        const dateSet = new Set(filter);
+        return events.filter((e) => {
+          const ds = e.date.getFullYear() + '-'
+            + String(e.date.getMonth() + 1).padStart(2, '0') + '-'
+            + String(e.date.getDate()).padStart(2, '0');
+          return dateSet.has(ds);
+        });
+      }
+      return events;
     }
 
-    function DateFilterBar({ active, onTab, onDate }) {
-      const dateRef = React.useRef(null);
+    function DateFilterBar({ active, onTab, onDates }) {
+      const [calOpen, setCalOpen] = React.useState(false);
+      const [viewYear, setViewYear] = React.useState(() => new Date().getFullYear());
+      const [viewMonth, setViewMonth] = React.useState(() => new Date().getMonth());
+      const wrapRef = React.useRef(null);
+
+      const isMulti = Array.isArray(active);
+      const selectedSet = new Set(isMulti ? active : []);
+      const todayStr = (() => {
+        const t = new Date();
+        return t.getFullYear() + '-'
+          + String(t.getMonth() + 1).padStart(2, '0') + '-'
+          + String(t.getDate()).padStart(2, '0');
+      })();
+
+      React.useEffect(() => {
+        if (!calOpen) return;
+        const handler = (e) => {
+          if (wrapRef.current && !wrapRef.current.contains(e.target)) setCalOpen(false);
+        };
+        const onKey = (e) => { if (e.key === 'Escape') setCalOpen(false); };
+        document.addEventListener('mousedown', handler);
+        document.addEventListener('keydown', onKey);
+        return () => {
+          document.removeEventListener('mousedown', handler);
+          document.removeEventListener('keydown', onKey);
+        };
+      }, [calOpen]);
+
+      const toDS = (y, m, d) =>
+        y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+
+      const prevMonth = () => {
+        if (viewMonth === 0) { setViewMonth(11); setViewYear((y) => y - 1); }
+        else setViewMonth((m) => m - 1);
+      };
+      const nextMonth = () => {
+        if (viewMonth === 11) { setViewMonth(0); setViewYear((y) => y + 1); }
+        else setViewMonth((m) => m + 1);
+      };
+
+      const startOffset = (new Date(viewYear, viewMonth, 1).getDay() + 6) % 7; // Mon=0
+      const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+      const totalCells = Math.ceil((startOffset + daysInMonth) / 7) * 7;
+
+      const toggleDate = (ds) => {
+        const next = selectedSet.has(ds)
+          ? (isMulti ? active : []).filter((d) => d !== ds)
+          : [...(isMulti ? active : []), ds];
+        onDates(next.length > 0 ? next : null);
+      };
+
+      const monthLabel = new Date(viewYear, viewMonth).toLocaleString('en-GB', { month: 'long', year: 'numeric' });
+      const pickerLabel = isMulti && active.length > 0
+        ? `${active.length} date${active.length !== 1 ? 's' : ''} selected`
+        : 'Pick dates';
+
       const tabs = [
         { id: 'all',       label: 'All' },
         { id: 'this_week', label: 'This week' },
         { id: 'next_week', label: 'Next week' },
       ];
-      const isTab = ['all','this_week','next_week'].includes(active);
-
-      React.useEffect(() => {
-        if (!dateRef.current) return;
-        dateRef.current.value = isTab ? '' : active;
-      }, [active]);
 
       return (
         <div className="date-filter-bar">
           <div className="date-filter-bar__tabs">
             {tabs.map((t) => (
               <button key={t.id} type="button"
-                      className={`date-tab${active === t.id ? ' date-tab--on' : ''}`}
-                      onClick={() => onTab(t.id)} aria-pressed={active === t.id}>
+                      className={`date-tab${!isMulti && active === t.id ? ' date-tab--on' : ''}`}
+                      onClick={() => onTab(t.id)} aria-pressed={!isMulti && active === t.id}>
                 {t.label}
               </button>
             ))}
           </div>
-          <input type="date" className="date-picker"
-                 ref={dateRef}
-                 aria-label="Pick a date"
-                 onChange={(e) => e.target.value ? onDate(e.target.value) : onTab('all')}/>
+
+          <div className="date-picker-wrap" ref={wrapRef}>
+            <button type="button"
+                    className={`date-tab${isMulti && active.length > 0 ? ' date-tab--on' : ''}`}
+                    onClick={() => setCalOpen((o) => !o)}
+                    aria-expanded={calOpen}>
+              <svg width="11" height="11" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M1 6h12" stroke="currentColor" strokeWidth="1.5"/>
+                <rect x="4" y="0.5" width="1.5" height="3" rx=".75" fill="currentColor"/>
+                <rect x="8.5" y="0.5" width="1.5" height="3" rx=".75" fill="currentColor"/>
+              </svg>
+              {pickerLabel}
+            </button>
+
+            {calOpen && (
+              <div className="cal-dropdown" role="dialog" aria-label="Pick dates">
+                <div className="cal-nav">
+                  <button type="button" className="cal-nav__btn" onClick={prevMonth} aria-label="Previous month">‹</button>
+                  <span className="cal-nav__label">{monthLabel}</span>
+                  <button type="button" className="cal-nav__btn" onClick={nextMonth} aria-label="Next month">›</button>
+                </div>
+                <div className="cal-grid">
+                  {['M','T','W','T','F','S','S'].map((d, i) => (
+                    <span key={i} className="cal-dow">{d}</span>
+                  ))}
+                  {Array.from({ length: totalCells }, (_, i) => {
+                    const dayNum = i - startOffset + 1;
+                    if (dayNum < 1 || dayNum > daysInMonth)
+                      return <span key={i} className="cal-cell cal-cell--empty"/>;
+                    const ds = toDS(viewYear, viewMonth, dayNum);
+                    const isSel = selectedSet.has(ds);
+                    const isToday = ds === todayStr;
+                    return (
+                      <button key={i} type="button"
+                              className={`cal-cell${isSel ? ' cal-cell--sel' : ''}${isToday ? ' cal-cell--today' : ''}`}
+                              onClick={() => toggleDate(ds)}
+                              aria-pressed={isSel}
+                              aria-label={ds}>
+                        {dayNum}
+                      </button>
+                    );
+                  })}
+                </div>
+                {isMulti && active.length > 0 && (
+                  <div className="cal-footer">
+                    <button type="button" className="cal-clear"
+                            onClick={() => { onDates(null); setCalOpen(false); }}>
+                      Clear selection
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       );
     }
@@ -574,7 +681,7 @@
             <FilterBar filters={UPCOMING_FILTERS} active={upcomingFilter} onChange={setUpcomingFilter}/>
             <DateFilterBar active={dateFilter}
                            onTab={(id) => setDateFilter(id)}
-                           onDate={(d) => setDateFilter(d)}/>
+                           onDates={(dates) => setDateFilter(dates || 'all')}/>
             <ListView events={filteredUpcoming} today={today}/>
           </section>
 
