@@ -326,45 +326,115 @@
     }
 
     function Hero({ today, thisWeekCount, ticketCount, generatedAt }) {
+      const [aboutOpen, setAboutOpen] = React.useState(false);
       const fmtDate = (d) => `${DAYS_FULL[d.getDay()]} ${ord(d.getDate())} ${MONTHS_FULL[d.getMonth()]}`;
       const updatedDate = generatedAt ? fmtDate(new Date(generatedAt)) : fmtDate(today);
+
+      React.useEffect(() => {
+        if (!aboutOpen) return;
+        const onKey = (e) => { if (e.key === 'Escape') setAboutOpen(false); };
+        window.addEventListener('keydown', onKey);
+        return () => window.removeEventListener('keydown', onKey);
+      }, [aboutOpen]);
+
       return (
-        <section className="hero hero--green">
-          <div className="hero__panel">
-            <div className="hero__copy">
-              <div className="hero__overline hero__overline--on-green">
-                <span className="ai-badge" aria-hidden="true">
-                  <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                    <path d="M6 1.2 7.1 4.9 10.8 6 7.1 7.1 6 10.8 4.9 7.1 1.2 6 4.9 4.9z" fill="currentColor"/>
-                  </svg>
-                  AI-found
-                </span>
-                <span className="hero__sep" aria-hidden="true">·</span>
-                <span>Updated {updatedDate}</span>
+        <>
+          <section className="hero hero--editorial" aria-label="Site introduction">
+
+            <div className="hero__editorial-copy">
+              <div className="hero__overline">
+                <span className="dot" aria-hidden="true"/>
+                Biggleswade &middot; SG18 &middot; Updated {updatedDate}
               </div>
-              <h1 className="hero__title">What's on<br/><em>in Biggleswade.</em></h1>
-              <p className="hero__lede hero__lede--on-green">
-                A free, AI-curated directory of every event in town — we continually scan local venues, councils, clubs and pubs so you don't have to.
+              <h1 className="hero__title">
+                What's on<br/><em>in Biggleswade.</em>
+              </h1>
+              <p className="hero__lede">
+                A free, AI-curated directory of every event in town — markets,
+                music, family days and more, continually updated.
               </p>
-              <div className="hero__trust">
+              <div className="hero__ctas">
+                <a href="#this-week" className="hero__cta-primary hero__cta-sm">Explore Events</a>
+                <button type="button" className="hero__cta-secondary" onClick={() => setAboutOpen(true)}>
+                  About Biggleswade
+                </button>
+                <button type="button" className="hero__cta-secondary feature--pending">
+                  List Your Event
+                </button>
+              </div>
+              <div className="hero__provenance" aria-label="How events are found">
                 <span>Found by AI</span>
-                <span className="hero__trust-dot"/>
+                <span className="hero__provenance-dot" aria-hidden="true"/>
                 <span>Checked by people</span>
               </div>
             </div>
-            <aside className="hero__rail" aria-label="At a glance">
-              <div className="i-stat">
-                <div className="i-stat__num">{thisWeekCount}</div>
-                <div className="i-stat__lbl">events<br/>this week</div>
+
+            <div className="hero__photo-col" aria-hidden="true">
+              <img
+                className="hero__photo"
+                src="assets/hero-bg.png"
+                alt=""
+                aria-hidden="true"
+                fetchpriority="high"
+              />
+              <div className="hero__photo-mask"/>
+              <div className="hero__photo-grain"/>
+            </div>
+
+          </section>
+
+          {aboutOpen && (
+            <div className="about-overlay" onClick={() => setAboutOpen(false)}
+                 role="dialog" aria-modal="true" aria-label="About Biggleswade">
+              <div className="about-modal" onClick={(e) => e.stopPropagation()}>
+                <button className="about-modal__close" onClick={() => setAboutOpen(false)}
+                        aria-label="Close">&#215;</button>
+                <div className="about-modal__eyebrow">About the town</div>
+                <h2 className="about-modal__title">Biggleswade</h2>
+                <div className="about-modal__body">
+                  <p>
+                    Biggleswade is a market town in Central Bedfordshire, sitting on the River Ivel
+                    about 11 miles south-east of Bedford. Its name derives from the Saxon
+                    "Biccel's ford," and the town grew up around a crossing of the Ivel.
+                  </p>
+                  <p>
+                    People have lived in the area since the Neolithic period. A rare gold
+                    Anglo-Saxon coin found near the river in 2001 was later purchased by the
+                    British Museum — at the time the most expensive British coin ever bought
+                    at auction.
+                  </p>
+                  <p>
+                    King John granted the town a market charter in the 13th century, and by the
+                    18th century its Wednesday market was considered one of the greatest in England
+                    for barley, peas, and horse-corn. In June 1785 a devastating fire swept through
+                    the town centre, destroying around 150 dwellings and several malt-houses in
+                    just a few hours.
+                  </p>
+                  <p>
+                    The town's most famous son is Dan Albone, a cycling pioneer who — working from
+                    a shop on Market Square — invented both the lady's bicycle and the tandem, and
+                    later created the Ivel Agricultural Tractor, which became widely used on farms
+                    across Britain.
+                  </p>
+                  <p>
+                    Today the town has a population of around 22,500.
+                  </p>
+                </div>
               </div>
-              <div className="i-stat__rule i-stat__rule--h" aria-hidden="true"/>
-              <div className="i-stat">
-                <div className="i-stat__num">{ticketCount}</div>
-                <div className="i-stat__lbl">tickets<br/>on sale now</div>
-              </div>
-            </aside>
+            </div>
+          )}
+
+          <div className="hero-meta-strip" aria-label="At a glance">
+            <div className="hero-meta-strip__stat">
+              <span className="hero-meta-strip__num">{thisWeekCount}</span>
+              <span className="hero-meta-strip__lbl">events<br/>this week</span>
+            </div>
+            <div className="hero-meta-strip__stat">
+              <span className="hero-meta-strip__num">{ticketCount}</span>
+              <span className="hero-meta-strip__lbl">tickets<br/>on sale now</span>
+            </div>
           </div>
-        </section>
+        </>
       );
     }
 
