@@ -1951,6 +1951,14 @@ body[data-density="spacious"] { --gap-section: 120px; --gap-card: 32px; --pad-ca
   cursor: default;
   pointer-events: none;
 }
+.cal-cell--past {
+  color: var(--c-stone-2);
+  cursor: default;
+}
+.cal-cell--past:hover {
+  background: transparent;
+  color: var(--c-stone-2);
+}
 .cal-footer {
   margin-top: 12px;
   padding-top: 10px;

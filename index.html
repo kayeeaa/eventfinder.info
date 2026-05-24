@@ -421,10 +421,12 @@
                     const ds = toDS(viewYear, viewMonth, dayNum);
                     const isSel = selectedSet.has(ds);
                     const isToday = ds === todayStr;
+                    const isPast = ds < todayStr;
                     return (
                       <button key={i} type="button"
-                              className={`cal-cell${isSel ? ' cal-cell--sel' : ''}${isToday ? ' cal-cell--today' : ''}`}
+                              className={`cal-cell${isSel ? ' cal-cell--sel' : ''}${isToday ? ' cal-cell--today' : ''}${isPast ? ' cal-cell--past' : ''}`}
                               onClick={() => toggleDate(ds)}
+                              disabled={isPast}
                               aria-pressed={isSel}
                               aria-label={ds}>
                         {dayNum}
