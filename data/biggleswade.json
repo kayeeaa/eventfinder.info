@@ -156,18 +156,6 @@
         "food-and-drink",
         "evening"
       ]
-    },
-    {
-      "name": "Wings and Wheels",
-      "address": "Shuttleworth, Old Warden, Biggleswade, SG18 9EP",
-      "date": "30 May 2026",
-      "time": "10:00",
-      "cost": "",
-      "source_url": "https://www.shuttleworth.org/wings-and-wheels",
-      "added_by": "user",
-      "added_at": "2026-05-23",
-      "note": "Annual airshow and car show at Shuttleworth",
-      "image_url": ""
     }
   ],
   "on_sale": [
