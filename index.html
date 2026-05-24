@@ -91,11 +91,12 @@
       return {
         id: `${slug}-${dateSlug}`,
         title: item.name || '',
-        blurb: item.blurb || '',
+        description: item.description || item.blurb || '',
         date: safeDate,
         dateStr: item.date || '',
         venue: item.address || '',
         category: item.category || 'community',
+        tags: Array.isArray(item.tags) ? item.tags : [],
         price: item.cost || '',
         placeholder: (item.name || '').toLowerCase(),
         image_url: item.image_url || '',
@@ -168,6 +169,10 @@
     }
 
     function FilterBar({ filters, active, onChange }) {
+      const [expanded, setExpanded] = React.useState(false);
+      const VISIBLE = 4;
+      const visible = expanded ? filters : filters.slice(0, VISIBLE);
+      const overflow = filters.length - VISIBLE;
       return (
         <div className="filter-bar" role="toolbar">
           <span className="filter-bar__ai" aria-hidden="true">
@@ -177,13 +182,25 @@
             Filter
           </span>
           <div className="filter-bar__pills">
-            {filters.map((f) => (
+            {visible.map((f) => (
               <button key={f.id} type="button"
                       className={`filter-pill${active === f.id ? ' filter-pill--on' : ''}`}
                       onClick={() => onChange(f.id)} aria-pressed={active === f.id}>
                 {f.label}
               </button>
             ))}
+            {overflow > 0 && !expanded && (
+              <button type="button" className="filter-pill filter-pill--more"
+                      onClick={() => setExpanded(true)} aria-label="Show more filters">
+                +{overflow}
+              </button>
+            )}
+            {expanded && (
+              <button type="button" className="filter-pill filter-pill--more"
+                      onClick={() => setExpanded(false)} aria-label="Show fewer filters">
+                −
+              </button>
+            )}
           </div>
         </div>
       );
@@ -211,7 +228,12 @@
             <a href={ev.source_url || '#'} target="_blank" rel="noopener">
               <h3 className="event__title">{ev.title}</h3>
             </a>
-            {ev.blurb && <p className="event__blurb">{ev.blurb}</p>}
+            {ev.description && <p className="event__blurb">{ev.description}</p>}
+            {ev.tags && ev.tags.length > 0 && (
+              <div className="event__tags">
+                {ev.tags.map((t) => <span key={t} className="event__tag">{t}</span>)}
+              </div>
+            )}
             {ev.venue && <div className="event__venue">{ev.venue}</div>}
           </div>
         </article>
@@ -277,7 +299,12 @@
               {hasValidDate && <span>{DAYS[ev.date.getDay()]} {ev.date.getDate()} {MONTHS[ev.date.getMonth()]}</span>}
               {ev.venue && <><span className="ticket__dot">·</span><span>{ev.venue}</span></>}
             </div>
-            {ev.blurb && <p className="event__blurb" style={{fontSize:'13px',marginTop:'8px'}}>{ev.blurb}</p>}
+            {ev.description && <p className="event__blurb" style={{fontSize:'13px',marginTop:'8px'}}>{ev.description}</p>}
+            {ev.tags && ev.tags.length > 0 && (
+              <div className="event__tags" style={{marginTop:'6px'}}>
+                {ev.tags.map((t) => <span key={t} className="event__tag">{t}</span>)}
+              </div>
+            )}
             {ev.price && (
               <div className="ticket__foot">
                 <div className="ticket__price">
@@ -449,24 +476,19 @@
       );
     }
 
-    const UPCOMING_FILTERS = [
-      { id: 'all',      label: 'All' },
-      { id: 'free',     label: 'Free entry',       test: (e) => e.price && /\bfree\b/i.test(e.price) },
-      { id: 'evening',  label: 'Evenings',          test: (e) => e.date.getHours() >= 18 },
-      { id: 'outdoors', label: 'Outdoors',          test: (e) => ['outdoors','sport','market','community'].includes(e.category) },
-      { id: 'family',   label: 'Family-friendly',   test: (e) => ['family','community','market'].includes(e.category) },
-    ];
-
-    const TICKETS_FILTERS = [
-      { id: 'all',       label: 'All' },
-      { id: 'under10',   label: 'Under £10', test: (e) => {
-        const n = parseFloat(String(e.price).replace(/[^\d.]/g, ''));
-        return n > 0 && n < 10;
-      }},
-      { id: 'music',    label: 'Live music',   test: (e) => e.category === 'music' },
-      { id: 'family',   label: 'For families', test: (e) => ['family','community'].includes(e.category) },
-      { id: 'stage',    label: 'Stage & arts', test: (e) => ['stage','music','talk'].includes(e.category) },
-    ];
+    function buildFilters(events) {
+      const keys = new Set();
+      (events || []).forEach(ev => {
+        if (ev.category && ev.category !== 'community') keys.add(ev.category);
+        (ev.tags || []).forEach(t => keys.add(t));
+      });
+      const filters = [...keys].sort().map(key => ({
+        id: key,
+        label: key.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()),
+        test: e => (e.tags || []).includes(key) || e.category === key,
+      }));
+      return [{ id: 'all', label: 'All', test: null }, ...filters];
+    }
 
     function TopBar() {
       return (
@@ -642,6 +664,17 @@
           .catch((err) => setError(err.message));
       }, []);
 
+      const upcomingFilters = React.useMemo(() => buildFilters(evData?.thisWeek), [evData]);
+      const ticketsFilters  = React.useMemo(() => buildFilters(evData?.onSale),   [evData]);
+
+      React.useEffect(() => {
+        if (!upcomingFilters.find(f => f.id === upcomingFilter)) setUpcomingFilter('all');
+      }, [upcomingFilters]);
+
+      React.useEffect(() => {
+        if (!ticketsFilters.find(f => f.id === ticketsFilter)) setTicketsFilter('all');
+      }, [ticketsFilters]);
+
       if (error) return (
         <div style={{ padding: '80px 40px', textAlign: 'center', color: 'var(--c-ink-3)' }}>
           <p>Could not load events. Please try again later.</p>
@@ -657,12 +690,12 @@
 
       const { today, thisWeek, onSale, generatedAt } = evData;
 
-      const _uf = UPCOMING_FILTERS.find((x) => x.id === upcomingFilter);
-      const categoryFiltered = _uf && _uf.test ? thisWeek.filter(_uf.test) : thisWeek;
+      const _uf = upcomingFilters.find((x) => x.id === upcomingFilter);
+      const categoryFiltered = _uf?.test ? thisWeek.filter(_uf.test) : thisWeek;
       const filteredUpcoming = applyDateFilter(categoryFiltered, dateFilter, today);
 
-      const _tf = TICKETS_FILTERS.find((x) => x.id === ticketsFilter);
-      const categoryFilteredTickets = _tf && _tf.test ? onSale.filter(_tf.test) : onSale;
+      const _tf = ticketsFilters.find((x) => x.id === ticketsFilter);
+      const categoryFilteredTickets = _tf?.test ? onSale.filter(_tf.test) : onSale;
       const filteredTickets = applyDateFilter(categoryFilteredTickets, ticketDateFilter, today);
 
       return (
@@ -684,7 +717,7 @@
                 </div>
               </div>
             </header>
-            <FilterBar filters={UPCOMING_FILTERS} active={upcomingFilter} onChange={setUpcomingFilter}/>
+            <FilterBar filters={upcomingFilters} active={upcomingFilter} onChange={setUpcomingFilter}/>
             <DateFilterBar active={dateFilter}
                            onTab={(id) => setDateFilter(id)}
                            onDates={(dates) => setDateFilter(dates || 'all')}
@@ -702,7 +735,7 @@
                 </div>
               </div>
             </header>
-            <FilterBar filters={TICKETS_FILTERS} active={ticketsFilter} onChange={setTicketsFilter}/>
+            <FilterBar filters={ticketsFilters} active={ticketsFilter} onChange={setTicketsFilter}/>
             <DateFilterBar active={ticketDateFilter}
                            onTab={(id) => setTicketDateFilter(id)}
                            onDates={(dates) => setTicketDateFilter(dates || 'all')}/>
