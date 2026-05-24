@@ -314,7 +314,7 @@
       return events;
     }
 
-    function DateFilterBar({ active, onTab, onDates }) {
+    function DateFilterBar({ active, onTab, onDates, allLabel = 'All' }) {
       const [calOpen, setCalOpen] = React.useState(false);
       const [viewYear, setViewYear] = React.useState(() => new Date().getFullYear());
       const [viewMonth, setViewMonth] = React.useState(() => new Date().getMonth());
@@ -372,7 +372,7 @@
         : 'Pick dates';
 
       const tabs = [
-        { id: 'all',       label: 'All' },
+        { id: 'all',       label: allLabel },
         { id: 'this_week', label: 'This week' },
         { id: 'next_week', label: 'Next week' },
       ];
@@ -687,7 +687,8 @@
             <FilterBar filters={UPCOMING_FILTERS} active={upcomingFilter} onChange={setUpcomingFilter}/>
             <DateFilterBar active={dateFilter}
                            onTab={(id) => setDateFilter(id)}
-                           onDates={(dates) => setDateFilter(dates || 'all')}/>
+                           onDates={(dates) => setDateFilter(dates || 'all')}
+                           allLabel="This month"/>
             <ListView events={filteredUpcoming} today={today}/>
           </section>
 
